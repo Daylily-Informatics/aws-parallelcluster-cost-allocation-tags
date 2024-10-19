@@ -20,6 +20,8 @@
 
 bucket="<bucket>"
 
+region=$cfn_region
+
 if [ "${cfn_node_type}" == "ComputeFleet" ];then
 
   # Create the folder used to save jobs information
@@ -40,7 +42,8 @@ else
 
 source /etc/profile
 
-region=$(curl -s http://169.254.169.254/latest/meta-data/placement/region)
+TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+region=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/region)
 aws configure set region $region
 
 update=0
@@ -105,14 +108,14 @@ fi
 if [ ${update} -eq 1 ]; then
   
   # Instance ID
-  MyInstID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+  TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+  MyInstID=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id)
   tag_userid=$(cat /tmp/jobs/tag_userid)
   tag_jobid=$(cat /tmp/jobs/tag_jobid)
   tag_project=$(cat /tmp/jobs/tag_project)
-  aws ec2 create-tags --resources ${MyInstID} --tags Key=aws-parallelcluster-username,Value="${tag_userid}"
-  aws ec2 create-tags --resources ${MyInstID} --tags Key=aws-parallelcluster-jobid,Value="${tag_jobid}"
-  aws ec2 create-tags --resources ${MyInstID} --tags Key=aws-parallelcluster-project,Value="${tag_project}"
-  
+  aws ec2 create-tags --resources ${MyInstID} --tags Key=aws-parallelcluster-username,Value="${tag_userid}" --region ${region}
+  aws ec2 create-tags --resources ${MyInstID} --tags Key=aws-parallelcluster-jobid,Value="${tag_jobid}" --region ${region}
+  aws ec2 create-tags --resources ${MyInstID} --tags Key=aws-parallelcluster-project,Value="${tag_project}" --region ${region}    
 fi
 
 
